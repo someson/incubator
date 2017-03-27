@@ -7,7 +7,7 @@ use Codeception\TestCase\Test;
 use UnitTester;
 
 /**
- * \Phalcon\Test\Db\Adapter\Factory
+ * \Phalcon\Test\Db\Adapter\FactoryTest
  * Tests for Phalcon\Db\Adapter\Factory component
  *
  * @copyright (c) 2011-2016 Phalcon Team
@@ -43,19 +43,12 @@ class FactoryTest extends Test
     {
         $this->testable = [
             'adapter'  => null,
-            'host'     => TEST_DB_HOST,
-            'username' => TEST_DB_USER,
-            'password' => TEST_DB_PASSWD,
-            'dbname'   => TEST_DB_NAME,
-            'charset'  => TEST_DB_CHARSET,
+            'host'     => env('TEST_DB_HOST', '127.0.0.1'),
+            'username' => env('TEST_DB_USER', 'incubator'),
+            'password' => env('TEST_DB_PASSWD', 'secret'),
+            'dbname'   => env('TEST_DB_NAME', 'incubator'),
+            'charset'  => env('TEST_DB_CHARSET', 'utf8'),
         ];
-    }
-
-    /**
-     * executed after each test
-     */
-    protected function _after()
-    {
     }
 
     public function testLoadMysqlAdapter()

@@ -1,12 +1,13 @@
 <?php
+
 /*
   +------------------------------------------------------------------------+
   | Phalcon Framework                                                      |
   +------------------------------------------------------------------------+
-  | Copyright (c) 2011-2016 Phalcon Team (http://www.phalconphp.com)       |
+  | Copyright (c) 2011-2016 Phalcon Team (https://www.phalconphp.com)      |
   +------------------------------------------------------------------------+
   | This source file is subject to the New BSD License that is bundled     |
-  | with this package in the file docs/LICENSE.txt.                        |
+  | with this package in the file LICENSE.txt.                             |
   |                                                                        |
   | If you did not receive a copy of the license and are unable to         |
   | obtain it through the world-wide-web, please send an email             |
@@ -70,6 +71,12 @@ class Database extends Adapter
     protected $rolesInherits;
 
     /**
+     * Default action for no arguments is allow
+     * @var int
+     */
+    protected $noArgumentsDefaultAction = Acl::ALLOW;
+
+    /**
      * Class constructor.
      *
      * @param  array $options Adapter config
@@ -98,8 +105,10 @@ class Database extends Adapter
      * {@inheritdoc}
      *
      * Example:
-     * <code>$acl->addRole(new Phalcon\Acl\Role('administrator'), 'consultor');</code>
-     * <code>$acl->addRole('administrator', 'consultor');</code>
+     * <code>
+     * $acl->addRole(new Phalcon\Acl\Role('administrator'), 'consultor');
+     * $acl->addRole('administrator', 'consultor');
+     * </code>
      *
      * @param  \Phalcon\Acl\Role|string $role
      * @param  string                   $accessInherits
@@ -342,8 +351,9 @@ class Database extends Adapter
      * @param string       $roleName
      * @param string       $resourceName
      * @param array|string $access
+     * @param mixed $func
      */
-    public function allow($roleName, $resourceName, $access)
+    public function allow($roleName, $resourceName, $access, $func = null)
     {
         $this->allowOrDeny($roleName, $resourceName, $access, Acl::ALLOW);
     }
@@ -366,9 +376,10 @@ class Database extends Adapter
      * @param  string       $roleName
      * @param  string       $resourceName
      * @param  array|string $access
+     * @param  mixed $func
      * @return boolean
      */
-    public function deny($roleName, $resourceName, $access)
+    public function deny($roleName, $resourceName, $access, $func = null)
     {
         $this->allowOrDeny($roleName, $resourceName, $access, Acl::DENY);
     }
@@ -386,10 +397,10 @@ class Database extends Adapter
      * @param string $role
      * @param string $resource
      * @param string $access
-     *
+     * @param array  $parameters
      * @return bool
      */
-    public function isAllowed($role, $resource, $access)
+    public function isAllowed($role, $resource, $access, array $parameters = null)
     {
         $sql = implode(' ', [
             "SELECT " . $this->connection->escapeIdentifier('allowed') . " FROM {$this->accessList} AS a",
@@ -407,7 +418,7 @@ class Database extends Adapter
             // access_name should be given one or 'any'
             "AND access_name IN (?, '*')",
             // order be the sum of bools for 'literals' before 'any'
-            "ORDER BY (roles_name != '*')+(resources_name != '*')+(access_name != '*') DESC",
+            "ORDER BY ".$this->connection->escapeIdentifier('allowed')." DESC",
             // get only one...
             'LIMIT 1'
         ]);
@@ -426,6 +437,28 @@ class Database extends Adapter
     }
 
     /**
+     * Returns the default ACL access level for no arguments provided
+     * in isAllowed action if there exists func for accessKey
+     *
+     * @return int
+     */
+    public function getNoArgumentsDefaultAction()
+    {
+        return $this->noArgumentsDefaultAction;
+    }
+
+    /**
+     * Sets the default access level for no arguments provided
+     * in isAllowed action if there exists func for accessKey
+     *
+     * @param int $defaultAccess Phalcon\Acl::ALLOW or Phalcon\Acl::DENY
+     */
+    public function setNoArgumentsDefaultAction($defaultAccess)
+    {
+        $this->noArgumentsDefaultAction = intval($defaultAccess);
+    }
+
+    /**
      * Inserts/Updates a permission in the access list
      *
      * @param  string  $roleName
@@ -438,14 +471,16 @@ class Database extends Adapter
     protected function insertOrUpdateAccess($roleName, $resourceName, $accessName, $action)
     {
         /**
-         * Check if the access is valid in the resource
+         * Check if the access is valid in the resource unless wildcard
          */
-        $sql = "SELECT COUNT(*) FROM {$this->resourcesAccesses} WHERE resources_name = ? AND access_name = ?";
-        $exists = $this->connection->fetchOne($sql, null, [$resourceName, $accessName]);
-        if (!$exists[0]) {
-            throw new Exception(
-                "Access '{$accessName}' does not exist in resource '{$resourceName}' in ACL"
-            );
+        if ($resourceName !== '*' && $accessName !== '*') {
+            $sql = "SELECT COUNT(*) FROM {$this->resourcesAccesses} WHERE resources_name = ? AND access_name = ?";
+            $exists = $this->connection->fetchOne($sql, null, [$resourceName, $accessName]);
+            if (!$exists[0]) {
+                throw new Exception(
+                    "Access '{$accessName}' does not exist in resource '{$resourceName}' in ACL"
+                );
+            }
         }
 
         /**

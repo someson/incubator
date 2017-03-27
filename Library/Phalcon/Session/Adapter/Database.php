@@ -1,12 +1,13 @@
 <?php
+
 /*
   +------------------------------------------------------------------------+
   | Phalcon Framework                                                      |
   +------------------------------------------------------------------------+
-  | Copyright (c) 2011-2016 Phalcon Team (http://www.phalconphp.com)       |
+  | Copyright (c) 2011-2016 Phalcon Team (https://www.phalconphp.com)      |
   +------------------------------------------------------------------------+
   | This source file is subject to the New BSD License that is bundled     |
-  | with this package in the file docs/LICENSE.txt.                        |
+  | with this package in the file LICENSE.txt.                             |
   |                                                                        |
   | If you did not receive a copy of the license and are unable to         |
   | obtain it through the world-wide-web, please send an email             |
@@ -17,6 +18,7 @@
   |          Nikita Vershinin <endeveit@gmail.com>                         |
   +------------------------------------------------------------------------+
 */
+
 namespace Phalcon\Session\Adapter;
 
 use Phalcon\Db;
@@ -46,7 +48,7 @@ class Database extends Adapter implements AdapterInterface
     {
         if (!isset($options['db']) || !$options['db'] instanceof DbAdapter) {
             throw new Exception(
-                'Parameter "db" is required and it must be an instance of Phalcon\Acl\AdapterInterface'
+                'Parameter "db" is required and it must be an instance of Phalcon\Db\AdapterInterface'
             );
         }
 
@@ -108,7 +110,7 @@ class Database extends Adapter implements AdapterInterface
         $maxLifetime = (int) ini_get('session.gc_maxlifetime');
 
         $options = $this->getOptions();
-        $row = $options['db']->fetchOne(
+        $row = $this->connection->fetchOne(
             sprintf(
                 'SELECT %s FROM %s WHERE %s = ? AND COALESCE(%s, %s) + %d >= ?',
                 $this->connection->escapeIdentifier($options['column_data']),
@@ -214,7 +216,7 @@ class Database extends Adapter implements AdapterInterface
     {
         $options = $this->getOptions();
 
-        return $options['db']->execute(
+        return $this->connection->execute(
             sprintf(
                 'DELETE FROM %s WHERE COALESCE(%s, %s) + %d < ?',
                 $this->connection->escapeIdentifier($options['table']),
